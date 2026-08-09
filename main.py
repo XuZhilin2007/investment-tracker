@@ -1,0 +1,1 @@
+print("Investment Tracker Start!")
