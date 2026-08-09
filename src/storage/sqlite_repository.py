@@ -207,6 +207,7 @@ class SQLiteInvestmentRecordRepository:
             action=row["action"],
             price=Decimal(row["price"]),
             quantity=Decimal(row["quantity"]),
+            amount=Decimal(row["amount"]),
             fee=Decimal(row["fee"]),
             strategy_type=row["strategy_type"],
             holding_plan=row["holding_plan"],

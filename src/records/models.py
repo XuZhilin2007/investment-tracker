@@ -53,7 +53,8 @@ def utc_now() -> datetime:
 class InvestmentRecord:
     """一笔交易及其决策背景和复盘信息。
 
-    金额由价格乘以数量得到，调用方不需要也不能单独传入 amount。
+    amount 是已确认的历史成交金额；未传入时按创建时的价格和数量自动填充。
+    calculated_amount 始终根据当前 price 和 quantity 动态计算，便于校验。
     price、quantity、fee 使用 Decimal，避免普通浮点数的精度误差。
     """
 
@@ -72,6 +73,7 @@ class InvestmentRecord:
     thesis: str
     risks: str
     exit_conditions: str
+    amount: Decimal | None = None
     fee: Decimal = Decimal("0")
     tags: list[str] = field(default_factory=list)
     review: str = ""
@@ -79,7 +81,6 @@ class InvestmentRecord:
     id: int | None = None
     created_at: datetime = field(default_factory=utc_now)
     updated_at: datetime | None = None
-    amount: Decimal = field(init=False)
 
     def __post_init__(self) -> None:
         self.validate()
@@ -99,10 +100,19 @@ class InvestmentRecord:
         self.quantity = self._to_decimal(self.quantity, "quantity")
         self.fee = self._to_decimal(self.fee, "fee")
 
+        if self.amount is None:
+            # 没有券商金额时，以创建记录时的计算结果作为历史金额。
+            self.amount = self.calculated_amount
+        else:
+            # 已有历史金额只做格式规范，不因价格或数量变化而覆盖。
+            self.amount = self._to_decimal(self.amount, "amount")
+
         if self.price <= 0:
             raise ValueError("price 必须大于 0")
         if self.quantity <= 0:
             raise ValueError("quantity 必须大于 0")
+        if self.amount <= 0:
+            raise ValueError("amount 必须大于 0")
         if self.fee < 0:
             raise ValueError("fee 不能小于 0")
 
@@ -135,8 +145,11 @@ class InvestmentRecord:
         else:
             self.updated_at = self._to_datetime(self.updated_at, "updated_at")
 
-        # amount 永远由当前 price 和 quantity 重新计算。
-        self.amount = self.price * self.quantity
+    @property
+    def calculated_amount(self) -> Decimal:
+        """根据当前价格和数量计算用于校验的金额。"""
+
+        return self.price * self.quantity
 
     @staticmethod
     def _to_date(value: date | str) -> date:

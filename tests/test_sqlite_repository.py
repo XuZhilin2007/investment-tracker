@@ -4,6 +4,7 @@ import unittest
 from decimal import Decimal
 from pathlib import Path
 
+from main import DEFAULT_DATABASE_PATH
 from src.records import InvestmentRecord
 from src.storage import RecordNotFoundError, SQLiteInvestmentRecordRepository
 from tests.test_models import make_record
@@ -18,6 +19,13 @@ class SQLiteInvestmentRecordRepositoryTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
+
+    def test_default_database_path_is_anchored_to_project_directory(self) -> None:
+        project_root = Path(__file__).resolve().parents[1]
+        expected_path = project_root / "data" / "investment_tracker.db"
+
+        self.assertTrue(DEFAULT_DATABASE_PATH.is_absolute())
+        self.assertEqual(DEFAULT_DATABASE_PATH, expected_path)
 
     def test_initialize_creates_database_and_schema(self) -> None:
         self.assertTrue(self.repository.database_path.exists())
@@ -55,8 +63,8 @@ class SQLiteInvestmentRecordRepositoryTests(unittest.TestCase):
         self.assertEqual(len(records), 2)
         self.assertEqual([record.symbol for record in records], ["MSFT", "AAPL"])
 
-    def test_update_recalculates_amount_and_saves_review(self) -> None:
-        record = self.repository.add(make_record())
+    def test_update_preserves_amount_and_saves_review(self) -> None:
+        record = self.repository.add(make_record(amount="31.49"))
         record.price = Decimal("12")
         record.quantity = Decimal("4")
         record.review = "执行符合计划"
@@ -64,7 +72,8 @@ class SQLiteInvestmentRecordRepositoryTests(unittest.TestCase):
 
         updated = self.repository.update(record)
 
-        self.assertEqual(updated.amount, Decimal("48"))
+        self.assertEqual(updated.amount, Decimal("31.49"))
+        self.assertEqual(updated.calculated_amount, Decimal("48"))
         self.assertEqual(updated.review, "执行符合计划")
         self.assertEqual(updated.lesson, "下次提前写清检查清单")
         self.assertGreaterEqual(updated.updated_at, updated.created_at)

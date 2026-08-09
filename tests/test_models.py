@@ -41,6 +41,19 @@ class InvestmentRecordTests(unittest.TestCase):
         record = make_record()
 
         self.assertEqual(record.amount, Decimal("31.50"))
+        self.assertEqual(record.calculated_amount, Decimal("31.50"))
+
+        # amount 是历史事实；修改价格或数量只影响动态校验值。
+        record.price = Decimal("12")
+        record.quantity = Decimal("4")
+        self.assertEqual(record.amount, Decimal("31.50"))
+        self.assertEqual(record.calculated_amount, Decimal("48"))
+
+        # 券商提供的实际金额应被保留，即使与简单乘积存在差异。
+        broker_record = make_record(amount="31.49")
+        self.assertEqual(broker_record.amount, Decimal("31.49"))
+        self.assertEqual(broker_record.calculated_amount, Decimal("31.50"))
+
         self.assertEqual(record.symbol, "AAPL")
         self.assertEqual(record.tags, ["价值", "观察仓"])
 

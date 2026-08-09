@@ -5,7 +5,9 @@ from pathlib import Path
 from src.storage import SQLiteInvestmentRecordRepository
 
 
-DEFAULT_DATABASE_PATH = Path("data/investment_tracker.db")
+# 数据库路径以 main.py 所在的项目目录为基准，不受启动目录影响。
+PROJECT_ROOT = Path(__file__).resolve().parent
+DEFAULT_DATABASE_PATH = PROJECT_ROOT / "data" / "investment_tracker.db"
 
 
 def main() -> None:
